@@ -38,20 +38,6 @@ module.private = {
     attached_buffers = {},
 }
 
---- Compute the indent level for a row by walking up from the deepest node
---- and accumulating contributions from headings and lists.
----
---- Each heading adds 1 level of indent to its content.
---- Each list (unordered/ordered) adds 1 level.
---- A heading's prefix line gets its parent headings' contributions only.
----
---- Returns a table with level and continuation_indent.
---- continuation_indent is the extra columns needed for list continuation lines
---- (lines within a list item that are not the prefix line).
----@param document_root userdata treesitter node
----@param row number 0-based row
----@param bufid? number buffer id — when provided, the actual content column is used
----@return table { level: number, continuation_indent: number }
 local function get_line(bufid, row)
     local lines = vim.api.nvim_buf_get_lines(bufid, row, row + 1, true)
     return lines[1]
@@ -118,6 +104,20 @@ local function list_continuation_indent(list_node, row, bufid)
     return continuation_indent
 end
 
+--- Compute the indent level for a row by walking up from the deepest node
+--- and accumulating contributions from headings and lists.
+---
+--- Each heading adds 1 level of indent to its content.
+--- Each list (unordered/ordered) adds 1 level.
+--- A heading's prefix line gets its parent headings' contributions only.
+---
+--- Returns a table with level and continuation_indent.
+--- continuation_indent is the extra columns needed for list continuation lines
+--- (lines within a list item that are not the prefix line).
+---@param document_root userdata treesitter node
+---@param row number 0-based row
+---@param bufid? number buffer id — when provided, the actual content column is used
+---@return table { level: number, continuation_indent: number }
 local function indent_level_for_row(document_root, row, bufid)
     local col = content_col_for_row(bufid, row)
     ---@diagnostic disable-next-line: undefined-field
@@ -228,7 +228,7 @@ local function apply_indent(bufid, row_start, row_end, indent_map, opts)
 end
 
 --- Compute the desired indent (in spaces) for a single row.
---- Used by both apply_indent and indentexpr.
+--- Used by indentexpr.
 ---@param bufid number buffer id
 ---@param row number 0-based row
 ---@return number desired indent in spaces
