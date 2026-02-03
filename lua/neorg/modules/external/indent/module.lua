@@ -52,17 +52,74 @@ module.private = {
 ---@param row number 0-based row
 ---@param bufid? number buffer id — when provided, the actual content column is used
 ---@return table { level: number, continuation_indent: number }
-local function indent_level_for_row(document_root, row, bufid)
-    local col = 0
-    if bufid then
-        local lines = vim.api.nvim_buf_get_lines(bufid, row, row + 1, true)
-        if lines[1] then
-            local content_start = lines[1]:find("%S")
-            if content_start then
-                col = content_start - 1
-            end
-        end
+local function get_line(bufid, row)
+    local lines = vim.api.nvim_buf_get_lines(bufid, row, row + 1, true)
+    return lines[1]
+end
+
+local function content_col_for_row(bufid, row)
+    if not bufid then
+        return 0
     end
+
+    local line = get_line(bufid, row)
+    if not line then
+        return 0
+    end
+
+    local content_start = line:find("%S")
+    if not content_start then
+        return 0
+    end
+
+    return content_start - 1
+end
+
+local function is_list_node(node_type)
+    return node_type:match("^unordered_list%d$") or node_type:match("^ordered_list%d$")
+end
+
+local function list_continuation_indent(list_node, row, bufid)
+    local prefix_row = list_node:start()
+    if prefix_row == row then
+        return 0
+    end
+
+    local content_child = list_node:named_child(1)
+    if content_child and content_child:type() == "detached_modifier_extension" then
+        content_child = list_node:named_child(2)
+    end
+    if not content_child then
+        return 0
+    end
+
+    local _, prefix_col = list_node:start()
+    local _, content_col = content_child:start()
+    local continuation_indent = content_col - prefix_col
+
+    -- The paragraph node may start at the space before the text
+    -- (e.g. after a detached_modifier_extension). Read the buffer
+    -- to find the actual text start.
+    if not bufid then
+        return continuation_indent
+    end
+
+    local line = get_line(bufid, prefix_row)
+    if not line then
+        return continuation_indent
+    end
+
+    local after = line:sub(content_col + 1)
+    local text_offset = after:find("%S")
+    if text_offset and text_offset > 1 then
+        continuation_indent = continuation_indent + text_offset - 1
+    end
+
+    return continuation_indent
+end
+
+local function indent_level_for_row(document_root, row, bufid)
+    local col = content_col_for_row(bufid, row)
     ---@diagnostic disable-next-line: undefined-field
     local node = document_root:named_descendant_for_range(row, col, row, col)
     if not node then
@@ -77,44 +134,18 @@ local function indent_level_for_row(document_root, row, bufid)
     while cur do
         local ntype = cur:type()
 
-        local heading_num = ntype:match("^heading(%d)$")
-        if heading_num then
+        if ntype:match("^heading(%d)$") then
             local prefix_row = cur:start()
             if prefix_row ~= row then
                 level = level + 1
             end
         end
 
-        if ntype:match("^unordered_list%d$") or ntype:match("^ordered_list%d$") then
+        if is_list_node(ntype) then
             if not found_list then
                 -- Innermost list: don't add a level so list markers
                 -- sit at the same indent as sibling paragraphs.
-                local prefix_row = cur:start()
-                if prefix_row ~= row then
-                    local content_child = cur:named_child(1)
-                    if content_child and content_child:type() == "detached_modifier_extension" then
-                        content_child = cur:named_child(2)
-                    end
-                    if content_child then
-                        local _, prefix_col = cur:start()
-                        local _, content_col = content_child:start()
-                        continuation_indent = content_col - prefix_col
-
-                        -- The paragraph node may start at the space before
-                        -- the text (e.g. after a detached_modifier_extension).
-                        -- Read the buffer to find the actual text start.
-                        if bufid then
-                            local lines = vim.api.nvim_buf_get_lines(bufid, prefix_row, prefix_row + 1, true)
-                            if lines[1] then
-                                local after = lines[1]:sub(content_col + 1)
-                                local text_offset = after:find("%S")
-                                if text_offset and text_offset > 1 then
-                                    continuation_indent = continuation_indent + text_offset - 1
-                                end
-                            end
-                        end
-                    end
-                end
+                continuation_indent = list_continuation_indent(cur, row, bufid)
                 found_list = true
             else
                 -- Outer lists contribute a full indent level.
@@ -128,6 +159,14 @@ local function indent_level_for_row(document_root, row, bufid)
     return { level = level, continuation_indent = continuation_indent }
 end
 
+local function desired_indent_for_info(info, indent_per_level)
+    if not info then
+        return 0
+    end
+
+    return info.level * indent_per_level + info.continuation_indent
+end
+
 --- Build a map of row -> { level, continuation_indent } for the given range.
 ---@param document_root userdata treesitter node
 ---@param row_start number 0-based inclusive
@@ -139,7 +178,7 @@ local function build_indent_map(document_root, row_start, row_end, bufid)
 
     for row = row_start, row_end - 1 do
         local info = indent_level_for_row(document_root, row, bufid)
-        if info.level > 0 or info.continuation_indent > 0 then
+        if desired_indent_for_info(info, 1) > 0 then
             indent_map[row] = info
         end
     end
@@ -161,15 +200,10 @@ local function apply_indent(bufid, row_start, row_end, indent_map, opts)
     module.private.is_reindenting = true
 
     for row = row_start, row_end - 1 do
-        local info = indent_map[row]
-        local desired = 0
-        if info then
-            desired = info.level * indent_per_level + info.continuation_indent
-        end
+        local desired = desired_indent_for_info(indent_map[row], indent_per_level)
 
-        local lines = vim.api.nvim_buf_get_lines(bufid, row, row + 1, true)
-        if lines[1] then
-            local line = lines[1]
+        local line = get_line(bufid, row)
+        if line then
             -- Skip empty/whitespace-only lines to avoid creating trailing whitespace.
             local content_start = line:find("%S")
             if not content_start then
@@ -206,7 +240,7 @@ local function desired_indent_for_row(bufid, row)
     end
 
     local info = indent_level_for_row(document_root, row, bufid)
-    return info.level * module.config.public.indent_per_level + info.continuation_indent
+    return desired_indent_for_info(info, module.config.public.indent_per_level)
 end
 
 --- indentexpr function called by Neovim's = operator.
@@ -247,9 +281,9 @@ local function schedule_rendering(bufid)
         return
     end
 
-    local not_scheduled = vim.tbl_isempty(module.private.rerendering_scheduled)
+    local was_empty = vim.tbl_isempty(module.private.rerendering_scheduled)
     module.private.rerendering_scheduled[bufid] = true
-    if not_scheduled then
+    if was_empty then
         vim.schedule(render_all_scheduled)
     end
 end
@@ -331,11 +365,11 @@ module.events.subscribed = {
     },
 }
 
--- Expose internal functions for testing and indentexpr
-module.public.indent_level_for_row = indent_level_for_row
+-- Expose indentexpr and a narrow test surface.
 module.public.indentexpr = indentexpr
-module.public.apply_indent = function(bufid, row_start, row_end, indent_map, opts)
-    apply_indent(bufid, row_start, row_end, indent_map, opts)
-end
+module.public._test = {
+    indent_level_for_row = indent_level_for_row,
+    apply_indent = apply_indent,
+}
 
 return module

@@ -25,12 +25,13 @@ local neorg_instance = tests.neorg_with("external.indent", {
 })
 
 local indent_module = neorg_instance.modules.get_module("external.indent")
+local test_api = indent_module._test
 
 describe("external.indent", function()
     describe("indent_level_for_row (pre-indented content)", function()
         it("returns level 3 for pre-indented list under heading2", function()
             local root, buf = parse_norg("* Heading 1\n    ** Heading 2\n        - List item")
-            local info = indent_module.indent_level_for_row(root, 2, buf)
+            local info = test_api.indent_level_for_row(root, 2, buf)
 
             assert.equal(2, info.level)
 
@@ -40,7 +41,7 @@ describe("external.indent", function()
         it("returns level 3 for pre-indented nested list item", function()
             local root, buf =
                 parse_norg("* Heading 1\n    ** Heading 2\n        - List item\n            -- Nested item")
-            local info = indent_module.indent_level_for_row(root, 3, buf)
+            local info = test_api.indent_level_for_row(root, 3, buf)
 
             assert.equal(3, info.level)
 
@@ -49,7 +50,7 @@ describe("external.indent", function()
 
         it("returns level 2 for pre-indented content under heading2", function()
             local root, buf = parse_norg("* Heading 1\n    ** Heading 2\n        Content under h2")
-            local info = indent_module.indent_level_for_row(root, 2, buf)
+            local info = test_api.indent_level_for_row(root, 2, buf)
 
             assert.equal(2, info.level)
 
@@ -58,7 +59,7 @@ describe("external.indent", function()
 
         it("returns continuation_indent for pre-indented continuation line", function()
             local root, buf = parse_norg("* Heading 1\n    - List item\n      continued text")
-            local info = indent_module.indent_level_for_row(root, 2, buf)
+            local info = test_api.indent_level_for_row(root, 2, buf)
 
             assert.is_true(info.continuation_indent > 0)
 
@@ -69,7 +70,7 @@ describe("external.indent", function()
     describe("indent_level_for_row", function()
         it("returns level 0 for heading1 prefix line", function()
             local root, buf = parse_norg("* Heading 1")
-            local info = indent_module.indent_level_for_row(root, 0, buf)
+            local info = test_api.indent_level_for_row(root, 0, buf)
 
             assert.equal(0, info.level)
 
@@ -78,7 +79,7 @@ describe("external.indent", function()
 
         it("returns level 1 for content under heading1", function()
             local root, buf = parse_norg("* Heading 1\nSome content")
-            local info = indent_module.indent_level_for_row(root, 1, buf)
+            local info = test_api.indent_level_for_row(root, 1, buf)
 
             assert.equal(1, info.level)
 
@@ -87,7 +88,7 @@ describe("external.indent", function()
 
         it("returns level 1 for heading2 prefix under heading1", function()
             local root, buf = parse_norg("* Heading 1\n** Heading 2")
-            local info = indent_module.indent_level_for_row(root, 1, buf)
+            local info = test_api.indent_level_for_row(root, 1, buf)
 
             assert.equal(1, info.level)
 
@@ -96,7 +97,7 @@ describe("external.indent", function()
 
         it("returns level 2 for content under heading2", function()
             local root, buf = parse_norg("* Heading 1\n** Heading 2\nContent under h2")
-            local info = indent_module.indent_level_for_row(root, 2, buf)
+            local info = test_api.indent_level_for_row(root, 2, buf)
 
             assert.equal(2, info.level)
 
@@ -105,7 +106,7 @@ describe("external.indent", function()
 
         it("returns level 2 for list item under heading2", function()
             local root, buf = parse_norg("* Heading 1\n** Heading 2\n- List item")
-            local info = indent_module.indent_level_for_row(root, 2, buf)
+            local info = test_api.indent_level_for_row(root, 2, buf)
 
             assert.equal(2, info.level)
 
@@ -114,7 +115,7 @@ describe("external.indent", function()
 
         it("returns level 3 for nested list item", function()
             local root, buf = parse_norg("* Heading 1\n** Heading 2\n- List item\n-- Nested item")
-            local info = indent_module.indent_level_for_row(root, 3, buf)
+            local info = test_api.indent_level_for_row(root, 3, buf)
 
             assert.equal(3, info.level)
 
@@ -123,7 +124,7 @@ describe("external.indent", function()
 
         it("inherits parent heading level for empty line between headings", function()
             local root, buf = parse_norg("* Heading 1\n\n** Heading 2")
-            local info = indent_module.indent_level_for_row(root, 1, buf)
+            local info = test_api.indent_level_for_row(root, 1, buf)
 
             assert.equal(1, info.level)
 
@@ -132,7 +133,7 @@ describe("external.indent", function()
 
         it("returns continuation_indent 0 for non-list lines", function()
             local root, buf = parse_norg("* Heading 1\nSome content")
-            local info = indent_module.indent_level_for_row(root, 1, buf)
+            local info = test_api.indent_level_for_row(root, 1, buf)
 
             assert.equal(0, info.continuation_indent)
 
@@ -141,8 +142,8 @@ describe("external.indent", function()
 
         it("returns same level for list item and sibling paragraph under heading", function()
             local root, buf = parse_norg("* Heading 1\nParagraph text\n- List item")
-            local para_info = indent_module.indent_level_for_row(root, 1, buf)
-            local list_info = indent_module.indent_level_for_row(root, 2, buf)
+            local para_info = test_api.indent_level_for_row(root, 1, buf)
+            local list_info = test_api.indent_level_for_row(root, 2, buf)
 
             assert.equal(para_info.level, list_info.level)
 
@@ -153,7 +154,7 @@ describe("external.indent", function()
     describe("continuation lines", function()
         it("returns continuation_indent 0 for list item prefix line", function()
             local root, buf = parse_norg("- List item")
-            local info = indent_module.indent_level_for_row(root, 0, buf)
+            local info = test_api.indent_level_for_row(root, 0, buf)
 
             assert.equal(0, info.continuation_indent)
 
@@ -162,7 +163,7 @@ describe("external.indent", function()
 
         it("returns continuation_indent for second line of list item", function()
             local root, buf = parse_norg("- List item\n  continued text")
-            local info = indent_module.indent_level_for_row(root, 1, buf)
+            local info = test_api.indent_level_for_row(root, 1, buf)
 
             assert.is_true(info.continuation_indent > 0)
 
@@ -171,7 +172,7 @@ describe("external.indent", function()
 
         it("aligns continuation after '- ' prefix with +2 columns", function()
             local root, buf = parse_norg("- List item\n  continued text")
-            local info = indent_module.indent_level_for_row(root, 1, buf)
+            local info = test_api.indent_level_for_row(root, 1, buf)
 
             assert.equal(2, info.continuation_indent)
 
@@ -180,8 +181,8 @@ describe("external.indent", function()
 
         it("aligns continuation after detached_modifier_extension with text start", function()
             local root, buf = parse_norg("- ( ) Task text\n      continued")
-            local prefix_info = indent_module.indent_level_for_row(root, 0, buf)
-            local cont_info = indent_module.indent_level_for_row(root, 1, buf)
+            local prefix_info = test_api.indent_level_for_row(root, 0, buf)
+            local cont_info = test_api.indent_level_for_row(root, 1, buf)
 
             assert.equal(0, prefix_info.continuation_indent)
             assert.is_true(cont_info.continuation_indent >= 6)
@@ -202,7 +203,7 @@ describe("external.indent", function()
                 [1] = { level = 1, continuation_indent = 0 },
             }
 
-            indent_module.apply_indent(buf, 0, 2, indent_map)
+            test_api.apply_indent(buf, 0, 2, indent_map)
 
             local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
             assert.equal("* Heading 1", lines[1])
@@ -217,7 +218,7 @@ describe("external.indent", function()
                 "* Heading 1",
             })
 
-            indent_module.apply_indent(buf, 0, 1, {})
+            test_api.apply_indent(buf, 0, 1, {})
 
             local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
             assert.equal("* Heading 1", lines[1])
@@ -235,7 +236,7 @@ describe("external.indent", function()
                 [0] = { level = 2, continuation_indent = 0 },
             }
 
-            indent_module.apply_indent(buf, 0, 1, indent_map)
+            test_api.apply_indent(buf, 0, 1, indent_map)
 
             local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
             assert.equal("        Content with wrong indent", lines[1])
@@ -253,7 +254,7 @@ describe("external.indent", function()
                 [0] = { level = 1, continuation_indent = 2 },
             }
 
-            indent_module.apply_indent(buf, 0, 1, indent_map)
+            test_api.apply_indent(buf, 0, 1, indent_map)
 
             local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
             -- 1 * 4 + 2 = 6 spaces
@@ -273,7 +274,7 @@ describe("external.indent", function()
                 [0] = { level = 1, continuation_indent = 0 },
             }
 
-            indent_module.apply_indent(buf, 0, 1, indent_map, { preserve_modified = true })
+            test_api.apply_indent(buf, 0, 1, indent_map, { preserve_modified = true })
 
             assert.is_false(vim.bo[buf].modified)
 
