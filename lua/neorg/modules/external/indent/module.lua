@@ -85,11 +85,9 @@ local function indent_level_for_row(document_root, row, bufid)
         end
 
         if ntype:match("^unordered_list%d$") or ntype:match("^ordered_list%d$") then
-            level = level + 1
-
-            -- Only compute continuation indent for the innermost list node
-            -- when we're not on its prefix line (i.e. a wrapped paragraph line).
             if not found_list then
+                -- Innermost list: don't add a level so list markers
+                -- sit at the same indent as sibling paragraphs.
                 local prefix_row = cur:start()
                 if prefix_row ~= row then
                     local content_child = cur:named_child(1)
@@ -100,9 +98,26 @@ local function indent_level_for_row(document_root, row, bufid)
                         local _, prefix_col = cur:start()
                         local _, content_col = content_child:start()
                         continuation_indent = content_col - prefix_col
+
+                        -- The paragraph node may start at the space before
+                        -- the text (e.g. after a detached_modifier_extension).
+                        -- Read the buffer to find the actual text start.
+                        if bufid then
+                            local lines = vim.api.nvim_buf_get_lines(bufid, prefix_row, prefix_row + 1, true)
+                            if lines[1] then
+                                local after = lines[1]:sub(content_col + 1)
+                                local text_offset = after:find("%S")
+                                if text_offset and text_offset > 1 then
+                                    continuation_indent = continuation_indent + text_offset - 1
+                                end
+                            end
+                        end
                     end
                 end
                 found_list = true
+            else
+                -- Outer lists contribute a full indent level.
+                level = level + 1
             end
         end
 

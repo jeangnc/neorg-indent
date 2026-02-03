@@ -32,17 +32,17 @@ describe("external.indent", function()
             local root, buf = parse_norg("* Heading 1\n    ** Heading 2\n        - List item")
             local info = indent_module.indent_level_for_row(root, 2, buf)
 
-            assert.equal(3, info.level)
+            assert.equal(2, info.level)
 
             cleanup_buf(buf)
         end)
 
-        it("returns level 4 for pre-indented nested list item", function()
+        it("returns level 3 for pre-indented nested list item", function()
             local root, buf =
                 parse_norg("* Heading 1\n    ** Heading 2\n        - List item\n            -- Nested item")
             local info = indent_module.indent_level_for_row(root, 3, buf)
 
-            assert.equal(4, info.level)
+            assert.equal(3, info.level)
 
             cleanup_buf(buf)
         end)
@@ -103,20 +103,20 @@ describe("external.indent", function()
             cleanup_buf(buf)
         end)
 
-        it("returns level 3 for list item under heading2", function()
+        it("returns level 2 for list item under heading2", function()
             local root, buf = parse_norg("* Heading 1\n** Heading 2\n- List item")
             local info = indent_module.indent_level_for_row(root, 2, buf)
 
-            assert.equal(3, info.level)
+            assert.equal(2, info.level)
 
             cleanup_buf(buf)
         end)
 
-        it("returns level 4 for nested list item", function()
+        it("returns level 3 for nested list item", function()
             local root, buf = parse_norg("* Heading 1\n** Heading 2\n- List item\n-- Nested item")
             local info = indent_module.indent_level_for_row(root, 3, buf)
 
-            assert.equal(4, info.level)
+            assert.equal(3, info.level)
 
             cleanup_buf(buf)
         end)
@@ -135,6 +135,16 @@ describe("external.indent", function()
             local info = indent_module.indent_level_for_row(root, 1, buf)
 
             assert.equal(0, info.continuation_indent)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns same level for list item and sibling paragraph under heading", function()
+            local root, buf = parse_norg("* Heading 1\nParagraph text\n- List item")
+            local para_info = indent_module.indent_level_for_row(root, 1, buf)
+            local list_info = indent_module.indent_level_for_row(root, 2, buf)
+
+            assert.equal(para_info.level, list_info.level)
 
             cleanup_buf(buf)
         end)
@@ -164,6 +174,17 @@ describe("external.indent", function()
             local info = indent_module.indent_level_for_row(root, 1, buf)
 
             assert.equal(2, info.continuation_indent)
+
+            cleanup_buf(buf)
+        end)
+
+        it("aligns continuation after detached_modifier_extension with text start", function()
+            local root, buf = parse_norg("- ( ) Task text\n      continued")
+            local prefix_info = indent_module.indent_level_for_row(root, 0, buf)
+            local cont_info = indent_module.indent_level_for_row(root, 1, buf)
+
+            assert.equal(0, prefix_info.continuation_indent)
+            assert.is_true(cont_info.continuation_indent >= 6)
 
             cleanup_buf(buf)
         end)
