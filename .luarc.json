@@ -1,5 +1,5 @@
 {
-    "diagnostics.globals": ["vim", "describe", "it", "assert"],
+    "diagnostics.globals": ["vim", "describe", "it", "assert", "rockspec_format", "package", "version", "description", "source", "dependencies", "test_dependencies", "build", "test"],
     "runtime.version": "LuaJIT",
     "workspace.library": ["${3rd}/luv/library"]
 }
