@@ -7,12 +7,10 @@ Neorg module for hierarchical indentation of norg files.
 - **Heading indentation** — content under headings is indented based on heading depth
 - **List indentation** — unordered (`-`) and ordered (`--`) lists indent according to nesting level
 - **Continuation line alignment** — wrapped lines in list items align with the content start
-- **Batched rendering** — buffer updates are batched via `vim.schedule()` to avoid redundant work
 
 ## Installation
 
-Install Neorg (via your Neovim plugin manager) first. This rockspec does not
-pull Neorg from LuaRocks, so it will rely on your local Neorg checkout.
+Install Neorg (via your Neovim plugin manager) first. This rockspec does not pull Neorg from LuaRocks, so it will rely on your local Neorg checkout.
 
 Install with LuaRocks from the rockspec:
 
