@@ -20,9 +20,7 @@ if MODREV == "scm" then
     }
 end
 
-dependencies = {
-    "neorg ~> 9",
-}
+dependencies = {}
 
 test_dependencies = {
     "busted",

@@ -11,10 +11,13 @@ Neorg module for hierarchical indentation of norg files.
 
 ## Installation
 
-Install with LuaRocks:
+Install Neorg (via your Neovim plugin manager) first. This rockspec does not
+pull Neorg from LuaRocks, so it will rely on your local Neorg checkout.
+
+Install with LuaRocks from the rockspec:
 
 ```sh
-luarocks install neorg-indent
+luarocks make --local neorg-indent-scm-1.rockspec
 ```
 
 Then load the module in your Neorg config:
@@ -44,16 +47,28 @@ require("neorg").setup({
 
 ## Development
 
-Install dependencies:
-
-```sh
-make deps
-```
-
 Run tests:
 
 ```sh
 make test
+```
+
+By default the tests look for Neorg under:
+
+```sh
+~/.local/share/nvim/lazy/neorg/lua
+```
+
+Override with `NEORG_DIR` if your Neorg install lives elsewhere:
+
+```sh
+NEORG_DIR=/path/to/neorg/lua make test
+```
+
+If `nvim-treesitter` is not under the standard Lazy path, set:
+
+```sh
+NVIM_TREESITTER_DIR=/path/to/nvim-treesitter make test
 ```
 
 Check formatting:

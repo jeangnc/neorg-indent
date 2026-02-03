@@ -11,13 +11,25 @@ local tests = {}
 
 -- Add directories containing parser/norg.so to the runtimepath so treesitter
 -- can find the norg parser.  Neovim looks for parser/<lang>.so on each rtp entry.
+local lazy_dir = vim.fn.expand("~/.local/share/nvim/lazy")
+
 local results = vim.fs.find("norg.so", {
-    path = vim.fn.expand("~/.local/share/nvim/lazy"),
+    path = lazy_dir,
     type = "file",
 })
 if results[1] then
     -- norg.so lives at <dir>/parser/norg.so — add <dir> to rtp
     vim.opt.rtp:append(vim.fn.fnamemodify(results[1], ":h:h"))
+end
+
+-- Ensure nvim-treesitter is on the runtimepath for Neorg's treesitter integration.
+local treesitter_dir = vim.env.NVIM_TREESITTER_DIR
+if not treesitter_dir or treesitter_dir == "" then
+    local treesitter_dirs = vim.fs.find("nvim-treesitter", { path = lazy_dir, type = "directory" })
+    treesitter_dir = treesitter_dirs[1]
+end
+if treesitter_dir and treesitter_dir ~= "" then
+    vim.opt.rtp:append(treesitter_dir)
 end
 
 --- Sets up Neorg with a given module.
