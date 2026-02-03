@@ -1,0 +1,5 @@
+{
+    "diagnostics.globals": ["vim", "describe", "it", "assert"],
+    "runtime.version": "LuaJIT",
+    "workspace.library": ["${3rd}/luv/library"]
+}

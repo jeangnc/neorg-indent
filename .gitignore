@@ -1,0 +1,8 @@
+# LuaRocks
+*.src.rock
+*.rock
+.rocks/
+lua_modules/
+
+# Compiled Lua
+luac.out
