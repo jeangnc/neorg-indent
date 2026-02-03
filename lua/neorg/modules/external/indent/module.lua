@@ -63,6 +63,7 @@ local function indent_level_for_row(document_root, row, bufid)
             end
         end
     end
+    ---@diagnostic disable-next-line: undefined-field
     local node = document_root:named_descendant_for_range(row, col, row, col)
     if not node then
         return { level = 0, continuation_indent = 0 }
@@ -260,7 +261,7 @@ local function attach_buffer(bufid)
     module.private.attached_buffers[bufid] = true
 
     local attach_succeeded = vim.api.nvim_buf_attach(bufid, true, {
-        on_lines = function(_tag, buf)
+        on_lines = function(_, buf)
             schedule_rendering(buf)
         end,
     })
