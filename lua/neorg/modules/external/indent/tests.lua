@@ -55,9 +55,7 @@ describe("external.indent", function()
         end)
 
         it("returns level 2 for pre-indented heading3 prefix under heading2", function()
-            local root, buf = parse_norg(
-                "* Heading 1\n    ** Heading 2\n        *** Heading 3"
-            )
+            local root, buf = parse_norg("* Heading 1\n    ** Heading 2\n        *** Heading 3")
             local info = calculation.indent_level_for_row(root, 2, buf)
 
             assert.equal(2, info.level)
@@ -66,9 +64,8 @@ describe("external.indent", function()
         end)
 
         it("returns level 3 for pre-indented content under heading3", function()
-            local root, buf = parse_norg(
-                "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            Content under h3"
-            )
+            local root, buf =
+                parse_norg("* Heading 1\n    ** Heading 2\n        *** Heading 3\n            Content under h3")
             local info = calculation.indent_level_for_row(root, 3, buf)
 
             assert.equal(3, info.level)
@@ -77,9 +74,8 @@ describe("external.indent", function()
         end)
 
         it("returns level 3 for pre-indented heading4 prefix under heading3", function()
-            local root, buf = parse_norg(
-                "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4"
-            )
+            local root, buf =
+                parse_norg("* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4")
             local info = calculation.indent_level_for_row(root, 3, buf)
 
             assert.equal(3, info.level)
@@ -88,7 +84,8 @@ describe("external.indent", function()
         end)
 
         it("returns level 4 for pre-indented content under heading4", function()
-            local content = "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4\n                Content under h4"
+            local content =
+                "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4\n                Content under h4"
             local root, buf = parse_norg(content)
             local info = calculation.indent_level_for_row(root, 4, buf)
 
@@ -98,7 +95,8 @@ describe("external.indent", function()
         end)
 
         it("returns level 4 for pre-indented list item under heading4", function()
-            local content = "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4\n                - List item"
+            local content =
+                "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4\n                - List item"
             local root, buf = parse_norg(content)
             local info = calculation.indent_level_for_row(root, 4, buf)
 
