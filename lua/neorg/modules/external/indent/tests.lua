@@ -335,6 +335,89 @@ describe("external.indent", function()
         end)
     end)
 
+    describe("promote/demote (heading prefix change with stale whitespace)", function()
+        it("computes correct indent levels after promote (h2 → h3)", function()
+            -- Simulates core.promo promoting h2 to h3: the *** prefix is in place
+            -- but whitespace still reflects the old h2 level (4 spaces).
+            local root, buf = parse_norg("* Heading 1\n    *** Heading 3\n        Content under h3")
+            local h3_info = calculation.indent_level_for_row(root, 1, buf)
+            local content_info = calculation.indent_level_for_row(root, 2, buf)
+
+            -- h3 prefix under h1 → level 1 (indented once as child of h1)
+            assert.equal(1, h3_info.level)
+            -- Content under h3 → level 2 + conceal_compensation
+            assert.equal(2, content_info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("computes correct indent levels after demote (h2 → h1)", function()
+            -- Simulates core.promo demoting h2 to h1: the * prefix is in place
+            -- but whitespace still reflects the old h2 level (4 spaces).
+            local root, buf = parse_norg("    * Heading 1\n        Content under h1")
+            local h1_info = calculation.indent_level_for_row(root, 0, buf)
+            local content_info = calculation.indent_level_for_row(root, 1, buf)
+
+            -- h1 prefix → level 0 (top level)
+            assert.equal(0, h1_info.level)
+            -- Content under h1 → level 1
+            assert.equal(1, content_info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("render corrects whitespace after simulated promote (h2 → h3)", function()
+            -- Buffer state after core.promo changes ** to *** but hasn't re-indented.
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.api.nvim_buf_set_lines(buf, 0, -1, true, {
+                "* Heading 1",
+                "    *** Heading 3",
+                "        Content under h3",
+            })
+            local parser = vim.treesitter.get_parser(buf, "norg")
+            local tree = parser:parse()[1]
+            local root = tree:root()
+
+            local line_count = vim.api.nvim_buf_line_count(buf)
+            local indent_map = calculation.build_indent_map(root, 0, line_count, buf)
+            renderer.apply_indent(buf, 0, line_count, indent_map, INDENT_PER_LEVEL)
+
+            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+            -- h1 stays at column 0
+            assert.equal("* Heading 1", lines[1])
+            -- h3 prefix under h1 → 1 level = 4 spaces
+            assert.equal("    *** Heading 3", lines[2])
+            -- Content under h3 → 2 levels + conceal_compensation(3) = 11 spaces
+            assert.equal("           Content under h3", lines[3])
+
+            vim.api.nvim_buf_delete(buf, { force = true })
+        end)
+
+        it("render corrects whitespace after simulated demote (h2 → h1)", function()
+            -- Buffer state after core.promo changes ** to * but hasn't re-indented.
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.api.nvim_buf_set_lines(buf, 0, -1, true, {
+                "    * Heading 1",
+                "        Content under h1",
+            })
+            local parser = vim.treesitter.get_parser(buf, "norg")
+            local tree = parser:parse()[1]
+            local root = tree:root()
+
+            local line_count = vim.api.nvim_buf_line_count(buf)
+            local indent_map = calculation.build_indent_map(root, 0, line_count, buf)
+            renderer.apply_indent(buf, 0, line_count, indent_map, INDENT_PER_LEVEL)
+
+            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+            -- h1 prefix → column 0 (no indent)
+            assert.equal("* Heading 1", lines[1])
+            -- Content under h1 → 1 level + conceal_compensation(1) = 5 spaces
+            assert.equal("     Content under h1", lines[2])
+
+            vim.api.nvim_buf_delete(buf, { force = true })
+        end)
+    end)
+
     describe("apply_indent (buffer modification)", function()
         it("inserts leading whitespace for indented lines", function()
             local buf = vim.api.nvim_create_buf(false, true)

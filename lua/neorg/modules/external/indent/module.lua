@@ -130,6 +130,19 @@ local function attach_buffer(bufid)
         core_indent.on_event = function() end
     end
 
+    -- Override reindent_range and buffer_set_line_indent so that core.promo
+    -- (which calls these directly) uses our indent logic instead of the
+    -- built-in one.
+    if core_indent and core_indent.public then
+        core_indent.public.reindent_range = function(buffer, _, _)
+            if vim.api.nvim_buf_is_valid(buffer) then
+                render_buffer(buffer)
+            end
+        end
+
+        core_indent.public.buffer_set_line_indent = function() end
+    end
+
     -- Override indentexpr so that = uses our indent logic.
     vim.bo[bufid].indentexpr = ("v:lua.require'neorg'.modules.get_module('external.indent').indentexpr(%d)"):format(
         bufid
