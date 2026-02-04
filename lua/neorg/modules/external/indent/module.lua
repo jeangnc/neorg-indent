@@ -17,6 +17,7 @@ local modules = neorg.modules
 
 local calculation = require("neorg.modules.external.indent.calculation")
 local renderer = require("neorg.modules.external.indent.renderer")
+local override = require("neorg.modules.external.indent.override")
 
 local module = modules.create("external.indent")
 
@@ -123,26 +124,6 @@ local function attach_buffer(bufid)
         })
     end
 
-    -- Disable core.esupports.indent so it doesn't override our indentexpr.
-    -- Done here (not in module.load) because module load order is non-deterministic.
-    local core_indent = modules.loaded_modules["core.esupports.indent"]
-    if core_indent and core_indent.on_event then
-        core_indent.on_event = function() end
-    end
-
-    -- Override reindent_range and buffer_set_line_indent so that core.promo
-    -- (which calls these directly) uses our indent logic instead of the
-    -- built-in one.
-    if core_indent and core_indent.public then
-        core_indent.public.reindent_range = function(buffer, _, _)
-            if vim.api.nvim_buf_is_valid(buffer) then
-                render_buffer(buffer)
-            end
-        end
-
-        core_indent.public.buffer_set_line_indent = function() end
-    end
-
     -- Override indentexpr so that = uses our indent logic.
     vim.bo[bufid].indentexpr = ("v:lua.require'neorg'.modules.get_module('external.indent').indentexpr(%d)"):format(
         bufid
@@ -178,6 +159,10 @@ end
 module.load = function()
     module.required["core.autocommands"].enable_autocommand("FileType", true)
     module.required["core.autocommands"].enable_autocommand("BufReadPost")
+
+    modules.await("core.esupports.indent", function(core_indent)
+        override.disable_core_indent(core_indent, render_buffer, indentexpr)
+    end)
 end
 
 module.events.subscribed = {
