@@ -448,82 +448,56 @@ describe("external.indent", function()
     describe("override", function()
         local override = require("neorg.modules.external.indent.override")
 
-        it("replaces on_event with a no-op", function()
-            local core_indent = {
-                on_event = function()
-                    return "original"
-                end,
-                public = {
-                    reindent_range = function() end,
-                    buffer_set_line_indent = function() end,
-                    indentexpr = function() end,
-                },
-            }
-
-            override.disable_core_indent(core_indent, function() end, function() end)
-
-            assert.is_nil(core_indent.on_event())
-        end)
-
         it("redirects reindent_range to render_buffer_fn", function()
             local called_with = nil
             local render_buffer_fn = function(buffer)
                 called_with = buffer
             end
 
-            local core_indent = {
-                on_event = function() end,
-                public = {
-                    reindent_range = function() end,
-                    buffer_set_line_indent = function() end,
-                    indentexpr = function() end,
-                },
+            local public = {
+                reindent_range = function() end,
+                buffer_set_line_indent = function() end,
+                indentexpr = function() end,
             }
 
-            override.disable_core_indent(core_indent, render_buffer_fn, function() end)
+            override.disable_core_indent(public, render_buffer_fn, function() end)
 
             local buf = vim.api.nvim_create_buf(false, true)
-            core_indent.public.reindent_range(buf, 0, 10)
+            public.reindent_range(buf, 0, 10)
             assert.equal(buf, called_with)
             vim.api.nvim_buf_delete(buf, { force = true })
         end)
 
         it("replaces buffer_set_line_indent with a no-op", function()
-            local core_indent = {
-                on_event = function() end,
-                public = {
-                    reindent_range = function() end,
-                    buffer_set_line_indent = function()
-                        return "original"
-                    end,
-                    indentexpr = function() end,
-                },
+            local public = {
+                reindent_range = function() end,
+                buffer_set_line_indent = function()
+                    return "original"
+                end,
+                indentexpr = function() end,
             }
 
-            override.disable_core_indent(core_indent, function() end, function() end)
+            override.disable_core_indent(public, function() end, function() end)
 
-            assert.is_nil(core_indent.public.buffer_set_line_indent())
+            assert.is_nil(public.buffer_set_line_indent())
         end)
 
-        it("replaces public.indentexpr with custom function", function()
-            local core_indent = {
-                on_event = function() end,
-                public = {
-                    reindent_range = function() end,
-                    buffer_set_line_indent = function() end,
-                    indentexpr = function()
-                        return -1
-                    end,
-                },
+        it("replaces indentexpr with custom function", function()
+            local public = {
+                reindent_range = function() end,
+                buffer_set_line_indent = function() end,
+                indentexpr = function()
+                    return -1
+                end,
             }
 
             local indentexpr_fn = function()
                 return 42
             end
 
-            override.disable_core_indent(core_indent, function() end, indentexpr_fn)
+            override.disable_core_indent(public, function() end, indentexpr_fn)
 
-            assert.equal(42, core_indent.public.indentexpr())
+            assert.equal(42, public.indentexpr())
         end)
 
         it("skips reindent_range when buffer is invalid", function()
@@ -532,19 +506,16 @@ describe("external.indent", function()
                 called = true
             end
 
-            local core_indent = {
-                on_event = function() end,
-                public = {
-                    reindent_range = function() end,
-                    buffer_set_line_indent = function() end,
-                    indentexpr = function() end,
-                },
+            local public = {
+                reindent_range = function() end,
+                buffer_set_line_indent = function() end,
+                indentexpr = function() end,
             }
 
-            override.disable_core_indent(core_indent, render_buffer_fn, function() end)
+            override.disable_core_indent(public, render_buffer_fn, function() end)
 
             -- Use an invalid buffer id
-            core_indent.public.reindent_range(99999, 0, 10)
+            public.reindent_range(99999, 0, 10)
             assert.is_false(called)
         end)
     end)
