@@ -1,3 +1,5 @@
+require("neorg.tests")
+
 local calculation = require("neorg.modules.external.indent.calculation")
 local renderer = require("neorg.modules.external.indent.renderer")
 
