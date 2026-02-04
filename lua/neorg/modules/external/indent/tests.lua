@@ -243,6 +243,33 @@ describe("external.indent", function()
 
             cleanup_buf(buf)
         end)
+
+        it("returns level 1 for list1 item after blank line between items", function()
+            local root, buf = parse_norg("* Heading 1\n- Item 1\n\n- Item 2")
+            local info = calculation.indent_level_for_row(root, 3, buf)
+
+            assert.equal(1, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 2 for list2 item after blank line between items", function()
+            local root, buf = parse_norg("* Heading 1\n- Item 1\n-- Sub 1\n\n-- Sub 2")
+            local info = calculation.indent_level_for_row(root, 4, buf)
+
+            assert.equal(2, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 3 for list3 item after blank line between items", function()
+            local root, buf = parse_norg("* Heading 1\n- Item 1\n-- Sub 1\n--- SubSub 1\n\n--- SubSub 2")
+            local info = calculation.indent_level_for_row(root, 5, buf)
+
+            assert.equal(3, info.level)
+
+            cleanup_buf(buf)
+        end)
     end)
 
     describe("conceal_compensation", function()

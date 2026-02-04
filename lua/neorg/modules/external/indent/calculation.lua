@@ -26,8 +26,9 @@ local function content_col_for_row(bufid, row)
     return content_start - 1
 end
 
-local function is_list_node(node_type)
-    return node_type:match("^unordered_list%d$") or node_type:match("^ordered_list%d$")
+local function list_node_level(node_type)
+    local n = node_type:match("^unordered_list(%d)$") or node_type:match("^ordered_list(%d)$")
+    return n and tonumber(n) or nil
 end
 
 local function list_continuation_indent(list_node, row, bufid)
@@ -114,15 +115,12 @@ function M.indent_level_for_row(document_root, row, bufid)
             end
         end
 
-        if is_list_node(ntype) then
+        local list_n = list_node_level(ntype)
+        if list_n then
             if not found_list then
-                -- Innermost list: don't add a level so list markers
-                -- sit at the same indent as sibling paragraphs.
                 continuation_indent = list_continuation_indent(cur, row, bufid)
+                level = level + (list_n - 1)
                 found_list = true
-            else
-                -- Outer lists contribute a full indent level.
-                level = level + 1
             end
         end
 
