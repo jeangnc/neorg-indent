@@ -57,6 +57,59 @@ describe("external.indent", function()
             cleanup_buf(buf)
         end)
 
+        it("returns level 2 for pre-indented heading3 prefix under heading2", function()
+            local root, buf = parse_norg(
+                "* Heading 1\n    ** Heading 2\n        *** Heading 3"
+            )
+            local info = test_api.indent_level_for_row(root, 2, buf)
+
+            assert.equal(2, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 3 for pre-indented content under heading3", function()
+            local root, buf = parse_norg(
+                "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            Content under h3"
+            )
+            local info = test_api.indent_level_for_row(root, 3, buf)
+
+            assert.equal(3, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 3 for pre-indented heading4 prefix under heading3", function()
+            local root, buf = parse_norg(
+                "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4"
+            )
+            local info = test_api.indent_level_for_row(root, 3, buf)
+
+            assert.equal(3, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 4 for pre-indented content under heading4", function()
+            local content = "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4\n                Content under h4"
+            local root, buf = parse_norg(content)
+            local info = test_api.indent_level_for_row(root, 4, buf)
+
+            assert.equal(4, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 4 for pre-indented list item under heading4", function()
+            local content = "* Heading 1\n    ** Heading 2\n        *** Heading 3\n            **** Heading 4\n                - List item"
+            local root, buf = parse_norg(content)
+            local info = test_api.indent_level_for_row(root, 4, buf)
+
+            assert.equal(4, info.level)
+
+            cleanup_buf(buf)
+        end)
+
         it("returns continuation_indent for pre-indented continuation line", function()
             local root, buf = parse_norg("* Heading 1\n    - List item\n      continued text")
             local info = test_api.indent_level_for_row(root, 2, buf)
@@ -122,6 +175,52 @@ describe("external.indent", function()
             cleanup_buf(buf)
         end)
 
+        it("returns level 2 for heading3 prefix under heading2", function()
+            local root, buf = parse_norg("* Heading 1\n** Heading 2\n*** Heading 3")
+            local info = test_api.indent_level_for_row(root, 2, buf)
+
+            assert.equal(2, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 3 for content under heading3", function()
+            local root, buf = parse_norg("* Heading 1\n** Heading 2\n*** Heading 3\nContent under h3")
+            local info = test_api.indent_level_for_row(root, 3, buf)
+
+            assert.equal(3, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 3 for heading4 prefix under heading3", function()
+            local root, buf = parse_norg("* Heading 1\n** Heading 2\n*** Heading 3\n**** Heading 4")
+            local info = test_api.indent_level_for_row(root, 3, buf)
+
+            assert.equal(3, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 4 for content under heading4", function()
+            local content = "* Heading 1\n** Heading 2\n*** Heading 3\n**** Heading 4\nContent under h4"
+            local root, buf = parse_norg(content)
+            local info = test_api.indent_level_for_row(root, 4, buf)
+
+            assert.equal(4, info.level)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns level 4 for list item under heading4", function()
+            local root, buf = parse_norg("* Heading 1\n** Heading 2\n*** Heading 3\n**** Heading 4\n- List item")
+            local info = test_api.indent_level_for_row(root, 4, buf)
+
+            assert.equal(4, info.level)
+
+            cleanup_buf(buf)
+        end)
+
         it("inherits parent heading level for empty line between headings", function()
             local root, buf = parse_norg("* Heading 1\n\n** Heading 2")
             local info = test_api.indent_level_for_row(root, 1, buf)
@@ -146,6 +245,56 @@ describe("external.indent", function()
             local list_info = test_api.indent_level_for_row(root, 2, buf)
 
             assert.equal(para_info.level, list_info.level)
+
+            cleanup_buf(buf)
+        end)
+    end)
+
+    describe("conceal_compensation", function()
+        it("returns conceal_compensation 1 for content under h1", function()
+            local root, buf = parse_norg("* Heading 1\nSome content")
+            local info = test_api.indent_level_for_row(root, 1, buf)
+
+            assert.equal(1, info.conceal_compensation)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns conceal_compensation 2 for content under h2", function()
+            local root, buf = parse_norg("* Heading 1\n** Heading 2\nContent under h2")
+            local info = test_api.indent_level_for_row(root, 2, buf)
+
+            assert.equal(2, info.conceal_compensation)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns conceal_compensation 3 for content under h3", function()
+            local root, buf = parse_norg("* Heading 1\n** Heading 2\n*** Heading 3\nContent under h3")
+            local info = test_api.indent_level_for_row(root, 3, buf)
+
+            assert.equal(3, info.conceal_compensation)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns conceal_compensation 4 for content under h4", function()
+            local content = "* Heading 1\n** Heading 2\n*** Heading 3\n**** Heading 4\nContent under h4"
+            local root, buf = parse_norg(content)
+            local info = test_api.indent_level_for_row(root, 4, buf)
+
+            assert.equal(4, info.conceal_compensation)
+
+            cleanup_buf(buf)
+        end)
+
+        it("returns conceal_compensation 0 for heading prefix lines", function()
+            local root, buf = parse_norg("* Heading 1\n** Heading 2")
+            local h1_info = test_api.indent_level_for_row(root, 0, buf)
+            local h2_info = test_api.indent_level_for_row(root, 1, buf)
+
+            assert.equal(0, h1_info.conceal_compensation)
+            assert.equal(0, h2_info.conceal_compensation)
 
             cleanup_buf(buf)
         end)

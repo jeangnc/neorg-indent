@@ -129,15 +129,23 @@ local function indent_level_for_row(document_root, row, bufid)
     local level = 0
     local continuation_indent = 0
     local found_list = false
+    local innermost_heading_level = nil
+    local row_is_heading_prefix = false
 
     local cur = node
     while cur do
         local ntype = cur:type()
 
-        if ntype:match("^heading(%d)$") then
+        local heading_n = ntype:match("^heading(%d)$")
+        if heading_n then
             local prefix_row = cur:start()
-            if prefix_row ~= row then
+            if prefix_row == row then
+                row_is_heading_prefix = true
+            else
                 level = level + 1
+                if not innermost_heading_level then
+                    innermost_heading_level = tonumber(heading_n)
+                end
             end
         end
 
@@ -156,7 +164,9 @@ local function indent_level_for_row(document_root, row, bufid)
         cur = cur:parent()
     end
 
-    return { level = level, continuation_indent = continuation_indent }
+    local conceal_compensation = (not row_is_heading_prefix and innermost_heading_level) or 0
+
+    return { level = level, continuation_indent = continuation_indent, conceal_compensation = conceal_compensation }
 end
 
 local function desired_indent_for_info(info, indent_per_level)
@@ -164,7 +174,7 @@ local function desired_indent_for_info(info, indent_per_level)
         return 0
     end
 
-    return info.level * indent_per_level + info.continuation_indent
+    return info.level * indent_per_level + info.continuation_indent + (info.conceal_compensation or 0)
 end
 
 --- Build a map of row -> { level, continuation_indent } for the given range.
