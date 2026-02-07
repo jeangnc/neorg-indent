@@ -70,29 +70,29 @@ local function list_continuation_indent(list_node, row, bufid)
     return continuation_indent
 end
 
---- Compute the indent level for a row by walking up from the deepest node
+--- Compute the indent info for a row by walking up from the deepest node
 --- and accumulating contributions from headings and lists.
 ---
---- Each heading adds 1 level of indent to its content.
---- Each list (unordered/ordered) adds 1 level.
+--- Each heading adds its level number to heading_contributions.
+--- Each list (unordered/ordered) contributes to list_nesting.
 --- A heading's prefix line gets its parent headings' contributions only.
 ---
---- Returns a table with level and continuation_indent.
---- continuation_indent is the extra columns needed for list continuation lines
---- (lines within a list item that are not the prefix line).
+--- Returns a table with heading_contributions, list_nesting, continuation_indent,
+--- and conceal_compensation.
 ---@param document_root userdata treesitter node
 ---@param row number 0-based row
 ---@param bufid? number buffer id — when provided, the actual content column is used
----@return table { level: number, continuation_indent: number }
+---@return table { heading_contributions: table, list_nesting: number, continuation_indent: number, conceal_compensation: number }
 function M.indent_level_for_row(document_root, row, bufid)
     local col = content_col_for_row(bufid, row)
     ---@diagnostic disable-next-line: undefined-field
     local node = document_root:named_descendant_for_range(row, col, row, col)
     if not node then
-        return { level = 0, continuation_indent = 0 }
+        return { heading_contributions = {}, list_nesting = 0, continuation_indent = 0, conceal_compensation = 0 }
     end
 
-    local level = 0
+    local heading_contributions = {}
+    local list_nesting = 0
     local continuation_indent = 0
     local found_list = false
     local innermost_heading_level = nil
@@ -108,7 +108,7 @@ function M.indent_level_for_row(document_root, row, bufid)
             if prefix_row == row then
                 row_is_heading_prefix = true
             else
-                level = level + 1
+                table.insert(heading_contributions, tonumber(heading_n))
                 if not innermost_heading_level then
                     innermost_heading_level = tonumber(heading_n)
                 end
@@ -119,7 +119,7 @@ function M.indent_level_for_row(document_root, row, bufid)
         if list_n then
             if not found_list then
                 continuation_indent = list_continuation_indent(cur, row, bufid)
-                level = level + (list_n - 1)
+                list_nesting = list_n - 1
                 found_list = true
             end
         end
@@ -127,20 +127,45 @@ function M.indent_level_for_row(document_root, row, bufid)
         cur = cur:parent()
     end
 
+    -- heading_contributions are collected inner-to-outer; reverse for outer-to-inner order
+    local reversed = {}
+    for i = #heading_contributions, 1, -1 do
+        reversed[#reversed + 1] = heading_contributions[i]
+    end
+
     local conceal_compensation = (not row_is_heading_prefix and innermost_heading_level) or 0
 
-    return { level = level, continuation_indent = continuation_indent, conceal_compensation = conceal_compensation }
+    return {
+        heading_contributions = reversed,
+        list_nesting = list_nesting,
+        continuation_indent = continuation_indent,
+        conceal_compensation = conceal_compensation,
+    }
 end
 
-function M.desired_indent_for_info(info, indent_per_level)
+function M.desired_indent_for_info(info, config)
     if not info then
         return 0
     end
 
-    return info.level * indent_per_level + info.continuation_indent + (info.conceal_compensation or 0)
+    local total = 0
+    for _, h in ipairs(info.heading_contributions) do
+        total = total + (config.heading_indent and config.heading_indent[h] or config.indent_per_level)
+    end
+    for i = 1, info.list_nesting do
+        total = total + (config.list_indent and config.list_indent[i] or config.indent_per_level)
+    end
+    return total + info.continuation_indent + (info.conceal_compensation or 0)
 end
 
---- Build a map of row -> { level, continuation_indent } for the given range.
+local function has_indent(info)
+    return #info.heading_contributions > 0
+        or info.list_nesting > 0
+        or info.continuation_indent > 0
+        or (info.conceal_compensation or 0) > 0
+end
+
+--- Build a map of row -> indent info for the given range.
 ---@param document_root userdata treesitter node
 ---@param row_start number 0-based inclusive
 ---@param row_end number 0-based exclusive
@@ -151,7 +176,7 @@ function M.build_indent_map(document_root, row_start, row_end, bufid)
 
     for row = row_start, row_end - 1 do
         local info = M.indent_level_for_row(document_root, row, bufid)
-        if M.desired_indent_for_info(info, 1) > 0 then
+        if has_indent(info) then
             indent_map[row] = info
         end
     end

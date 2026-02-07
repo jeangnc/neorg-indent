@@ -32,8 +32,12 @@ module.setup = function()
 end
 
 module.config.public = {
-    -- Number of spaces per indentation level.
+    -- Number of spaces per indentation level (fallback).
     indent_per_level = 4,
+    -- Optional per-heading-level indent: { [1]=4, [2]=4, ... }
+    heading_indent = nil,
+    -- Optional per-list-nesting-depth indent: { [1]=4, [2]=4, ... }
+    list_indent = nil,
 }
 
 module.private = {
@@ -48,7 +52,7 @@ module.private = {
 local function render_buffer(bufid, opts)
     local treesitter_module = module.required["core.integrations.treesitter"]
     module.private.is_reindenting = true
-    renderer.render_buffer(bufid, treesitter_module, module.config.public.indent_per_level, opts)
+    renderer.render_buffer(bufid, treesitter_module, module.config.public, opts)
     module.private.is_reindenting = false
 end
 
@@ -86,7 +90,7 @@ local function desired_indent_for_row(bufid, row)
     end
 
     local info = calculation.indent_level_for_row(document_root, row, bufid)
-    return calculation.desired_indent_for_info(info, module.config.public.indent_per_level)
+    return calculation.desired_indent_for_info(info, module.config.public)
 end
 
 --- indentexpr function called by Neovim's = operator.
