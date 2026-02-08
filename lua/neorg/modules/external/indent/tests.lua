@@ -738,7 +738,7 @@ describe("external.indent", function()
             assert.equal(8, result)
         end)
 
-        it("includes continuation_indent and conceal_compensation with per-level indent", function()
+        it("includes continuation_indent but not conceal_compensation with per-level indent", function()
             local info = {
                 heading_contributions = { 1 },
                 list_nesting = 1,
@@ -752,8 +752,24 @@ describe("external.indent", function()
             }
 
             local result = calculation.desired_indent_for_info(info, config)
-            -- heading: 6, list: 2, continuation: 3, conceal: 2, total = 13
-            assert.equal(13, result)
+            -- heading: 6, list: 2, continuation: 3, conceal: 0 (ignored with heading_indent), total = 11
+            assert.equal(11, result)
+        end)
+
+        it("does not add conceal_compensation when heading_indent is configured", function()
+            local info = {
+                heading_contributions = { 1 },
+                list_nesting = 0,
+                continuation_indent = 0,
+                conceal_compensation = 1,
+            }
+            local config = {
+                indent_per_level = 4,
+                heading_indent = { [1] = 0 },
+            }
+
+            local result = calculation.desired_indent_for_info(info, config)
+            assert.equal(0, result)
         end)
 
         it("renders buffer correctly with per-level heading indent", function()

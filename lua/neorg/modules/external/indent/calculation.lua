@@ -155,7 +155,8 @@ function M.desired_indent_for_info(info, config)
     for i = 1, info.list_nesting do
         total = total + (config.list_indent and config.list_indent[i] or config.indent_per_level)
     end
-    return total + info.continuation_indent + (info.conceal_compensation or 0)
+    local conceal = (not config.heading_indent) and (info.conceal_compensation or 0) or 0
+    return total + info.continuation_indent + conceal
 end
 
 local function has_indent(info)
