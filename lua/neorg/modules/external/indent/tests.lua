@@ -131,9 +131,9 @@ describe("external.indent", function()
                 heading_indent = { [1] = 0 },
             }
 
-            it("produces 0 indent for h1 content when heading_indent[1] is 0", function()
-                -- heading_indent[1]=0, conceal suppressed for level 1 → 0
-                assert.equal(0, desired_indent("* H1\nContent", 1, config))
+            it("preserves conceal for h1 content when heading_indent[1] is 0", function()
+                -- heading_indent[1]=0, conceal preserved to align with concealed bullet → 1
+                assert.equal(1, desired_indent("* H1\nContent", 1, config))
             end)
 
             it("preserves conceal for levels falling back to indent_per_level", function()

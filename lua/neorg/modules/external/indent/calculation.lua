@@ -160,7 +160,11 @@ function M.desired_indent_for_info(info, config)
     if config.heading_indent and config.heading_indent[innermost] ~= nil then
         conceal = 0
     end
-    return total + info.continuation_indent + conceal
+    local result = total + info.continuation_indent + conceal
+    if innermost == 1 and result < 1 then
+        result = 1
+    end
+    return result
 end
 
 local function has_indent(info)

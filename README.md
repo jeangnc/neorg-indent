@@ -93,6 +93,12 @@ Check formatting:
 make format
 ```
 
+## Limitations
+
+### Minimum indent of 1 for h1 content
+
+Content under h1 has a minimum indent of 1 space, even with `heading_indent = { [1] = 0 }`. This is because Neovim's concealer replaces the `*` marker with a single-character icon (e.g. `◉`), placing the heading text at column 1. The 1-space indent keeps body text aligned with the heading text after the icon.
+
 ## License
 
 MIT
